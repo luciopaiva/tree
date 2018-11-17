@@ -69,7 +69,7 @@ class App {
 
     drawGround() {
         this.ctx.strokeStyle = this.strokeColor;
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = TRUNK_BASE_WIDTH * BORDER_SIZE_FACTOR;
 
         this.ctx.beginPath();
 
@@ -84,6 +84,8 @@ class App {
         this.ctx.lineTo(aux.x, aux.y);
 
         this.ctx.stroke();
+        // erase everything below ground level
+        this.ctx.clearRect(0, aux.y, this.width, this.height - aux.y);
     }
 
     drawAttractionPoints() {
@@ -126,9 +128,9 @@ class App {
 
             this.ctx.clearRect(0, 0, this.width, this.height);
 
-            this.drawGround();
             this.drawAttractionPoints();
             this.drawTrunk();
+            this.drawGround();
         }
 
         requestAnimationFrame(this.updateFn);
