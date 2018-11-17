@@ -22,6 +22,11 @@ export default class Vector {
         return this;
     }
 
+    clear() {
+        this.x = this.y = this.z = 0;
+        return this;
+    }
+
     copyFrom(other) {
         this.x = other.x;
         this.y = other.y;
@@ -88,6 +93,14 @@ export default class Vector {
         const sin = Math.sin(radians);
         this.x = cos * x - sin * y;
         this.y = sin * x - cos * y;
+    }
+
+    /**
+     * Get the angle (in radians) between this vector and the unit vector (1, 0)
+     * @returns {Number}
+     */
+    get angle() {
+        return Math.acos(this.x / this.length);
     }
 
     get length() {
