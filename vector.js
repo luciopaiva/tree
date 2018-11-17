@@ -5,6 +5,21 @@ export default class Vector {
         this.x = x;
         this.y = y;
         this.z = z;
+        this.save();
+    }
+
+    save() {
+        this.savedX = this.x;
+        this.savedY = this.y;
+        this.savedZ = this.z;
+        return this;
+    }
+
+    restore() {
+        this.x = this.savedX;
+        this.y = this.savedY;
+        this.z = this.savedZ;
+        return this;
     }
 
     copyFrom(other) {
@@ -64,6 +79,15 @@ export default class Vector {
         this.y /= scalar;
         this.z /= scalar;
         return this;
+    }
+
+    rotate(radians) {
+        const x = this.x;
+        const y = this.y;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        this.x = cos * x - sin * y;
+        this.y = sin * x - cos * y;
     }
 
     get length() {

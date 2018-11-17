@@ -5,7 +5,7 @@ import Tree from "./tree.js";
 
 const SCALING_FACTOR = 0.3;
 const TRUNK_BASE_WIDTH = 90;
-const BORDER_SIZE_FACTOR = 0.12;
+const BORDER_SIZE_FACTOR = 0.08;
 
 class App {
 
@@ -87,32 +87,29 @@ class App {
         }
     }
 
-    drawTrunk() {
+    doDrawTrunk(baseWidth, fixedWidth) {
         const aux = this.aux;
+        this.modelToView(this.tree.trunk.segments[0].pos, aux);
+        this.ctx.beginPath();
+        this.ctx.moveTo(aux.x, aux.y);
+        for (let i = 1; i < this.tree.trunk.segments.length; i++) {
+            const point = this.tree.trunk.segments[i].pos;
+            this.modelToView(point, aux);
+            this.ctx.lineWidth = baseWidth * this.tree.trunk.segments[i].width + fixedWidth;
+            this.ctx.lineTo(aux.x, aux.y);
 
+            this.ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(aux.x, aux.y);
+        }
+        this.ctx.stroke();
+    }
+
+    drawTrunk() {
         this.ctx.strokeStyle = this.strokeColor;
-        this.ctx.lineWidth = TRUNK_BASE_WIDTH;
-        this.ctx.beginPath();
-        this.modelToView(this.tree.trunk[0], aux);
-        this.ctx.moveTo(aux.x, aux.y);
-        for (let i = 1; i < this.tree.trunk.length; i++) {
-            const point = this.tree.trunk[i];
-            this.modelToView(point, aux);
-            this.ctx.lineTo(aux.x, aux.y);
-        }
-        this.ctx.stroke();
-
+        this.doDrawTrunk(TRUNK_BASE_WIDTH, TRUNK_BASE_WIDTH * BORDER_SIZE_FACTOR);
         this.ctx.strokeStyle = this.woodColors[0];
-        this.ctx.lineWidth = TRUNK_BASE_WIDTH * (1 - BORDER_SIZE_FACTOR);
-        this.ctx.beginPath();
-        this.modelToView(this.tree.trunk[0], aux);
-        this.ctx.moveTo(aux.x, aux.y);
-        for (let i = 1; i < this.tree.trunk.length; i++) {
-            const point = this.tree.trunk[i];
-            this.modelToView(point, aux);
-            this.ctx.lineTo(aux.x, aux.y);
-        }
-        this.ctx.stroke();
+        this.doDrawTrunk(TRUNK_BASE_WIDTH * (1 - BORDER_SIZE_FACTOR), 0);
     }
 
     update() {
