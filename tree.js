@@ -17,6 +17,8 @@ const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
 const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.03;  // width of a segment that has just born
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
+const COLONIZATION_INFLUENCE_RADIUS = 0.4;
+const COLONIZATION_KILL_RADIUS = 0.15;
 
 class Segment {
     /**
@@ -33,11 +35,18 @@ class Segment {
         this.finalWidth = finalWidth;
         this.initialWidth = SEGMENT_INITIAL_WIDTH_IN_UNITS;
         this.width = this.initialWidth;
+        this.attractionPoints = [];
     }
     update() {
         if (this.width < this.finalWidth) {
             this.width += BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE;
         }
+    }
+    clearAttractionPoints() {
+        this.attractionPoints.length = 0;
+    }
+    addAttractionPoint(point) {
+        this.attractionPoints.push(point);
     }
 }
 
@@ -96,12 +105,45 @@ export default class Tree {
     }
 
     update() {
-        for (const attractionPoint of this.attractionPoints) {
+        let usedAttractionsPointsByIndex = [];
+
+        for (let i = 0; i < this.attractionPoints.length; i++) {
+            const attractionPoint = this.attractionPoints[i];
+            /** @type {Segment} */
+            let nearestSegment = null;
+            let shortestDistance = Number.POSITIVE_INFINITY;
+
             for (const branch of this.branches) {
-                // todo
+                for (const segment of branch.segments) {
+                    const distance = Vector.distance(attractionPoint, segment.pos);
+                    if (distance < COLONIZATION_INFLUENCE_RADIUS && distance < shortestDistance) {
+                        shortestDistance = distance;
+                        nearestSegment = segment;
+                    }
+                }
+            }
+
+            if (nearestSegment) {
+                nearestSegment.addAttractionPoint(attractionPoint);
+
+                if (shortestDistance < COLONIZATION_KILL_RADIUS) {
+                    usedAttractionsPointsByIndex.push(i);
+                }
             }
         }
 
         this.branches.forEach(branch => branch.update());
+
+        // clean up attraction point lists
+        for (const branch of this.branches) {
+            for (const segment of branch.segments) {
+                segment.clearAttractionPoints();
+            }
+        }
+
+        // remove used attraction points
+        for (const i of usedAttractionsPointsByIndex) {
+            this.attractionPoints.splice(i, 1);
+        }
     }
 }

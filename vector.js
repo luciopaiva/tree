@@ -155,4 +155,22 @@ export default class Vector {
     static from(other) {
         return new Vector(other.x, other.y, other.z)
     }
+
+    /**
+     * @param {Vector} a
+     * @param {Vector} b
+     * @returns {Number}
+     */
+    static distance(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    }
+
+    /**
+     * @param {Vector} a
+     * @param {Vector} b
+     * @returns {Number}
+     */
+    static squaredDistance(a, b) {
+        return (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2;
+    }
 }
