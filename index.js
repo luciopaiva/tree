@@ -9,7 +9,8 @@ const BORDER_SIZE = 5;
 class App {
 
     constructor () {
-        this.nodesElem = document.getElementById("nodes");
+        this.branchesElem = document.getElementById("branches");
+        this.segmentsElem = document.getElementById("segments");
 
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
@@ -35,7 +36,9 @@ class App {
     }
 
     reportMetrics() {
-        this.nodesElem.innerText = this.tree.trunk.segments.length.toString();
+        const branches = this.tree.branches;
+        this.branchesElem.innerText = branches.length.toString();
+        this.segmentsElem.innerText = branches.reduce((sum, branch) => sum + branch.segments.length, 0).toString();
     }
 
     keypress(event) {
@@ -96,29 +99,32 @@ class App {
         }
     }
 
-    doDrawTrunk(fixedWidthToAdd) {
-        const aux = this.aux;
-        this.modelToView(this.tree.trunk.segments[0].pos, aux);
-        this.ctx.beginPath();
-        this.ctx.moveTo(aux.x, aux.y);
-        for (let i = 1; i < this.tree.trunk.segments.length; i++) {
-            const point = this.tree.trunk.segments[i].pos;
-            this.modelToView(point, aux);
-            this.ctx.lineWidth = this.scaleX * this.tree.trunk.segments[i].width + fixedWidthToAdd;
-            this.ctx.lineTo(aux.x, aux.y);
-
-            this.ctx.stroke();
+    doDrawBranches(fixedWidthToAdd) {
+        for (const branch of this.tree.branches) {
+            const segments = branch.segments;
+            const aux = this.aux;
+            this.modelToView(segments[0].pos, aux);
             this.ctx.beginPath();
             this.ctx.moveTo(aux.x, aux.y);
+            for (let i = 1; i < segments.length; i++) {
+                const point = segments[i].pos;
+                this.modelToView(point, aux);
+                this.ctx.lineWidth = this.scaleX * segments[i].width + fixedWidthToAdd;
+                this.ctx.lineTo(aux.x, aux.y);
+
+                this.ctx.stroke();
+                this.ctx.beginPath();
+                this.ctx.moveTo(aux.x, aux.y);
+            }
+            this.ctx.stroke();
         }
-        this.ctx.stroke();
     }
 
-    drawTrunk() {
+    drawBranches() {
         this.ctx.strokeStyle = this.strokeColor;
-        this.doDrawTrunk(BORDER_SIZE);
+        this.doDrawBranches(BORDER_SIZE);
         this.ctx.strokeStyle = this.woodColors[0];
-        this.doDrawTrunk(0);
+        this.doDrawBranches(0);
     }
 
     update() {
@@ -128,7 +134,7 @@ class App {
             this.ctx.clearRect(0, 0, this.width, this.height);
 
             this.drawAttractionPoints();
-            this.drawTrunk();
+            this.drawBranches();
             this.drawGround();
         }
 

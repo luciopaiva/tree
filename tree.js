@@ -43,13 +43,14 @@ class Segment {
 
 class Branch {
     constructor (x, y, baseAngle, baseWidth) {
-        this.baseWidth = baseWidth;
-        this.minWidth = MIN_BRANCH_WIDTH_RATIO * this.baseWidth;
-        this.currentWidth = this.baseWidth;
         this.baseAngle = Math.PI + baseAngle;
+        this.baseWidth = baseWidth;
 
         /** @type {Segment[]} */
         this.segments = [new Segment(x, y, this.currentWidth)];
+
+        this.minWidth = MIN_BRANCH_WIDTH_RATIO * this.baseWidth;
+        this.currentWidth = this.baseWidth;
 
         this.aux = new Vector(0, 1);  // unit vector up
         this.angleTime = 0;
@@ -82,7 +83,10 @@ class Branch {
 export default class Tree {
 
     constructor () {
-        this.trunk = new Branch(0, 0, 0, TRUNK_WIDTH_IN_UNITS);
+        /** @type {Branch[]} */
+        this.branches = [];
+        const trunk = new Branch(0, 0, 0, TRUNK_WIDTH_IN_UNITS);
+        this.branches.push(trunk);
 
         this.attractionPoints = Array.from(Array(N_ATTRACTION_POINTS),
             () => new Vector(
@@ -92,6 +96,12 @@ export default class Tree {
     }
 
     update() {
-        this.trunk.update();
+        for (const attractionPoint of this.attractionPoints) {
+            for (const branch of this.branches) {
+                // todo
+            }
+        }
+
+        this.branches.forEach(branch => branch.update());
     }
 }
