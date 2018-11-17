@@ -17,7 +17,7 @@ class App {
         this.ctx = this.canvas.getContext("2d");
         document.body.appendChild(this.canvas);
 
-        this.isRunning = true;
+        this.isRunning = false;
 
         window.addEventListener("keypress", this.keypress.bind(this));
         window.addEventListener("resize", this.resize.bind(this));
@@ -46,6 +46,7 @@ class App {
     keypress(event) {
         switch (event.key) {
             case " ": this.isRunning = !this.isRunning; break;
+            case "n": this.update(performance.now(), true);
         }
     }
 
@@ -145,8 +146,8 @@ class App {
         this.doDrawBranches(0);
     }
 
-    update() {
-        if (this.isRunning) {
+    update(now, force = false) {
+        if (this.isRunning || force) {
             this.updateModel();
 
             this.ctx.clearRect(0, 0, this.width, this.height);
@@ -156,7 +157,9 @@ class App {
             this.drawGround();
         }
 
-        requestAnimationFrame(this.updateFn);
+        if (!force) {
+            requestAnimationFrame(this.updateFn);
+        }
     }
 }
 
