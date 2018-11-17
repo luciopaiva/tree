@@ -92,10 +92,26 @@ class App {
 
     drawAttractionPoints() {
         const aux = this.aux;
-        this.ctx.fillStyle = "white";
+        this.ctx.fillStyle = "red";
         for (const point of this.tree.attractionPoints) {
             this.modelToView(point, aux);
             this.ctx.fillRect(aux.x - 1, aux.y - 1, 3, 3);
+        }
+
+        this.ctx.strokeStyle = "blue";
+        this.ctx.lineWidth = 1;
+        for (const branch of this.tree.branches) {
+            const segments = branch.segments;
+            for (const segment of segments) {
+                for (const point of segment.attractionPoints) {
+                    this.ctx.beginPath();
+                    this.modelToView(point, aux);
+                    this.ctx.moveTo(aux.x, aux.y);
+                    this.modelToView(segment.pos, aux);
+                    this.ctx.lineTo(aux.x, aux.y);
+                    this.ctx.stroke();
+                }
+            }
         }
     }
 
@@ -133,8 +149,8 @@ class App {
 
             this.ctx.clearRect(0, 0, this.width, this.height);
 
-            this.drawAttractionPoints();
             this.drawBranches();
+            this.drawAttractionPoints();
             this.drawGround();
         }
 

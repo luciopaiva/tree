@@ -7,7 +7,7 @@ import Vector from "./vector.js";
  */
 const CROWN_HEIGHT_IN_UNITS = 0.3;
 const TRUNK_WIDTH_IN_UNITS = 0.15;
-const N_ATTRACTION_POINTS = 100;
+const N_ATTRACTION_POINTS = 200;
 const MIN_BRANCH_WIDTH_RATIO = 0.2;  // min value allowed for `current width / base width` before branch stops growing
 const GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE = 0.004;
 const BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * 1.4;  // distance between segments
@@ -17,8 +17,9 @@ const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
 const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.03;  // width of a segment that has just born
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
-const COLONIZATION_INFLUENCE_RADIUS = 0.4;
-const COLONIZATION_KILL_RADIUS = 0.15;
+const COLONIZATION_INFLUENCE_RADIUS = 0.3;
+const COLONIZATION_KILL_RADIUS = 0.1;
+const SEGMENT_SEARCH_STEP = 10;  // this will increase gap between branch spawns
 
 class Segment {
     /**
@@ -36,6 +37,7 @@ class Segment {
         this.initialWidth = SEGMENT_INITIAL_WIDTH_IN_UNITS;
         this.width = this.initialWidth;
         this.attractionPoints = [];
+        this.isTipOfBranch = true;
     }
     update() {
         if (this.width < this.finalWidth) {
@@ -85,6 +87,9 @@ class Branch {
         aux.add(tip.pos);
 
         this.segments.push(new Segment(aux.x, aux.y, this.currentWidth));
+
+        tip.isTipOfBranch = false;
+
         this.currentWidth *= NEXT_SEGMENT_WIDTH_RATIO;
     }
 }
@@ -107,14 +112,22 @@ export default class Tree {
     update() {
         let usedAttractionsPointsByIndex = [];
 
-        for (let i = 0; i < this.attractionPoints.length; i++) {
-            const attractionPoint = this.attractionPoints[i];
+        // clean up attraction point lists
+        for (const branch of this.branches) {
+            for (const segment of branch.segments) {
+                segment.clearAttractionPoints();
+            }
+        }
+
+        for (let pi = 0; pi < this.attractionPoints.length; pi++) {
+            const attractionPoint = this.attractionPoints[pi];
             /** @type {Segment} */
             let nearestSegment = null;
             let shortestDistance = Number.POSITIVE_INFINITY;
 
             for (const branch of this.branches) {
-                for (const segment of branch.segments) {
+                for (let si = 0; si < branch.segments.length; si += SEGMENT_SEARCH_STEP) {
+                    const segment = branch.segments[si];
                     const distance = Vector.distance(attractionPoint, segment.pos);
                     if (distance < COLONIZATION_INFLUENCE_RADIUS && distance < shortestDistance) {
                         shortestDistance = distance;
@@ -127,19 +140,12 @@ export default class Tree {
                 nearestSegment.addAttractionPoint(attractionPoint);
 
                 if (shortestDistance < COLONIZATION_KILL_RADIUS) {
-                    usedAttractionsPointsByIndex.push(i);
+                    usedAttractionsPointsByIndex.push(pi);
                 }
             }
         }
 
         this.branches.forEach(branch => branch.update());
-
-        // clean up attraction point lists
-        for (const branch of this.branches) {
-            for (const segment of branch.segments) {
-                segment.clearAttractionPoints();
-            }
-        }
 
         // remove used attraction points
         for (const i of usedAttractionsPointsByIndex) {
