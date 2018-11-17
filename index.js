@@ -5,6 +5,7 @@ import Tree from "./tree.js";
 
 const SCALING_FACTOR = 0.3;
 const BORDER_SIZE = 5;
+const WIREFRAME_MODE = true;
 
 class App {
 
@@ -59,8 +60,10 @@ class App {
         this.scaleY = Math.min(this.width, this.height) * SCALING_FACTOR * 2;
         this.canvas.setAttribute("width", this.width);
         this.canvas.setAttribute("height", this.height);
-        this.ctx.lineJoin = "round";
-        this.ctx.lineCap = "round";
+        if (!WIREFRAME_MODE) {
+            this.ctx.lineJoin = "round";
+            this.ctx.lineCap = "round";
+        }
     }
 
     modelToView(v, result) {
@@ -128,7 +131,7 @@ class App {
             for (let i = 1; i < segments.length; i++) {
                 const point = segments[i].pos;
                 this.modelToView(point, aux);
-                this.ctx.lineWidth = this.scaleX * segments[i].width + fixedWidthToAdd;
+                this.ctx.lineWidth = WIREFRAME_MODE ? 1 : this.scaleX * segments[i].width + fixedWidthToAdd;
                 this.ctx.lineTo(aux.x, aux.y);
 
                 this.ctx.stroke();
@@ -140,8 +143,10 @@ class App {
     }
 
     drawBranches() {
-        this.ctx.strokeStyle = this.strokeColor;
-        this.doDrawBranches(BORDER_SIZE);
+        if (!WIREFRAME_MODE) {
+            this.ctx.strokeStyle = this.strokeColor;
+            this.doDrawBranches(BORDER_SIZE);
+        }
         this.ctx.strokeStyle = this.woodColors[0];
         this.doDrawBranches(0);
     }
