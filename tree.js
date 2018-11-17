@@ -32,7 +32,7 @@ class Branch {
         this.aux = new Vector(0, 1);  // unit vector up
         this.angleTime = 0;
         this.angleSpeed = Math.PI / 60;  // 3 degrees per second
-        this.maxAngle = 30 / 180 * Math.PI;
+        this.maxAngle = 10 / 180 * Math.PI;
     }
     update(growthStep) {
         this.segments.forEach(segment => segment.update());
@@ -40,7 +40,7 @@ class Branch {
         const tip = this.segments[this.segments.length - 1];
 
         const aux = this.aux.restore();
-        const angle = Math.cos(this.angleTime) * this.maxAngle;
+        const angle = Math.sin(this.angleTime) * this.maxAngle;
         this.angleTime += this.angleSpeed;
         aux.rotate(this.baseAngle + angle);
         aux.mul(growthStep);
