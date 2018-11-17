@@ -10,6 +10,8 @@ const BORDER_SIZE_FACTOR = 0.08;
 class App {
 
     constructor () {
+        this.nodesElem = document.getElementById("nodes");
+
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
         document.body.appendChild(this.canvas);
@@ -29,6 +31,12 @@ class App {
 
         this.updateFn = this.update.bind(this);
         this.update(performance.now());
+
+        setInterval(this.reportMetrics.bind(this), 100);
+    }
+
+    reportMetrics() {
+        this.nodesElem.innerText = this.tree.trunk.segments.length.toString();
     }
 
     keypress(event) {
