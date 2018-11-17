@@ -4,6 +4,10 @@ import Vector from "./vector.js";
 const TRUNK_LENGTH = 0.3;
 const N_ATTRACTION_POINTS = 100;
 const MAX_BRANCH_SIZE_IN_SEGMENTS = 180;
+const MEANDER_ANGLE_IN_RADIANS = 10 / 180 * Math.PI;
+const MEANDER_CYCLES_PER_SECOND = 2.5;
+const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
+const BRANCH_GROWTH_STEP = 0.004;
 
 class Segment {
     /**
@@ -43,10 +47,10 @@ class Branch {
 
         this.aux = new Vector(0, 1);  // unit vector up
         this.angleTime = 0;
-        this.angleSpeed = Math.PI / 60;  // 3 degrees per second
-        this.maxAngle = 10 / 180 * Math.PI;
+        this.angleSpeed = MEANDER_CYCLES_PER_SECONDS_IN_RADIANS;
+        this.maxAngle = MEANDER_ANGLE_IN_RADIANS;
     }
-    update(growthStep) {
+    update() {
         this.segments.forEach(segment => segment.update());
 
         if (this.segments.length >= this.maxSizeInSegments) {
@@ -56,10 +60,12 @@ class Branch {
         const tip = this.segments[this.segments.length - 1];
 
         const aux = this.aux.restore();
-        const angle = Math.sin(this.angleTime) * this.maxAngle;
+        // calculate meandering angle
+        let angle = Math.sin(this.angleTime) * this.maxAngle;         // fundamental frequency at 100% amplitude
+        angle += Math.sin(2 * this.angleTime) * 0.8 * this.maxAngle;  // first octave at 80% amplitude
         this.angleTime += this.angleSpeed;
         aux.rotate(this.baseAngle + angle);
-        aux.mul(growthStep);
+        aux.mul(BRANCH_GROWTH_STEP);
         aux.add(tip.pos);
 
         this.segments.push(new Segment(aux.x, aux.y, this.baseSegmentGrowthFactor));
@@ -70,7 +76,6 @@ class Branch {
 export default class Tree {
 
     constructor () {
-        this.growthStep = 0.004;
         this.trunk = new Branch(0, 0, 1, 0);
 
         this.attractionPoints = Array.from(Array(N_ATTRACTION_POINTS),
@@ -81,6 +86,6 @@ export default class Tree {
     }
 
     update() {
-        this.trunk.update(this.growthStep);
+        this.trunk.update();
     }
 }
