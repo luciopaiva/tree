@@ -2,16 +2,26 @@
 import Vector from "./vector.js";
 
 const TRUNK_LENGTH = 0.3;
-const N_ATTRACTION_POINTS = 1000;
+const N_ATTRACTION_POINTS = 100;
+const MAX_BRANCH_SIZE_IN_SEGMENTS = 180;
 
 class Segment {
-    constructor (x, y) {
+    /**
+     * A segment of a branch. x,y are its world coordinates and growthFactor will determine segment's final width.
+     * Segments closer to the branch tip will have lower growth factors, causing branches to become thinner as they
+     * grow longer.
+     *
+     * @param x
+     * @param y
+     * @param growthFactor
+     */
+    constructor (x, y, growthFactor) {
         this.pos = new Vector(x, y);
-        this.initialWidth = 0.0001;
-        this.initialGrowthSpeed = .15;
+        this.initialWidth = 0.01;
+        this.initialGrowthSpeed = .2 * growthFactor;
         this.width = this.initialWidth;
         this.growthSpeed = this.initialGrowthSpeed;
-        this.growthDeceleration = .7;
+        this.growthDeceleration = growthFactor;
     }
     update() {
         if (this.growthSpeed > 0) {
@@ -25,9 +35,11 @@ class Branch {
     constructor (x, y, scale, baseAngle) {
         this.scale = scale;
         this.baseAngle = Math.PI + baseAngle;
+        this.baseSegmentGrowthFactor = 0.7;
 
         /** @type {Segment[]} */
-        this.segments = [new Segment(x, y)];
+        this.segments = [new Segment(x, y, this.baseSegmentGrowthFactor)];
+        this.maxSizeInSegments = MAX_BRANCH_SIZE_IN_SEGMENTS;
 
         this.aux = new Vector(0, 1);  // unit vector up
         this.angleTime = 0;
@@ -36,6 +48,10 @@ class Branch {
     }
     update(growthStep) {
         this.segments.forEach(segment => segment.update());
+
+        if (this.segments.length >= this.maxSizeInSegments) {
+            return;
+        }
 
         const tip = this.segments[this.segments.length - 1];
 
@@ -46,7 +62,8 @@ class Branch {
         aux.mul(growthStep);
         aux.add(tip.pos);
 
-        this.segments.push(new Segment(aux.x, aux.y, 1));
+        this.segments.push(new Segment(aux.x, aux.y, this.baseSegmentGrowthFactor));
+        this.baseSegmentGrowthFactor *= .994;
     }
 }
 

@@ -5,7 +5,7 @@ import Tree from "./tree.js";
 
 const SCALING_FACTOR = 0.3;
 const TRUNK_BASE_WIDTH = 90;
-const BORDER_SIZE_FACTOR = 0.08;
+const BORDER_SIZE_FACTOR = 0.04;
 
 class App {
 
