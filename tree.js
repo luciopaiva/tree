@@ -5,7 +5,7 @@ import Vector from "./vector.js";
    A tree model is always 1 unit high and 2 wide. All constants below take that into account.
    The root is at 0,0.
  */
-const TRUNK_LENGTH_IN_UNITS = 0.3;  // tree crown starts at this height
+const CROWN_HEIGHT_IN_UNITS = 0.3;
 const TRUNK_WIDTH_IN_UNITS = 0.15;
 const N_ATTRACTION_POINTS = 100;
 const MIN_BRANCH_WIDTH_RATIO = 0.2;  // min value allowed for `current width / base width` before branch stops growing
@@ -87,7 +87,7 @@ export default class Tree {
         this.attractionPoints = Array.from(Array(N_ATTRACTION_POINTS),
             () => new Vector(
                 2 * Math.random() - 1,
-                TRUNK_LENGTH_IN_UNITS + Math.random() * (1 - TRUNK_LENGTH_IN_UNITS)
+                CROWN_HEIGHT_IN_UNITS + Math.random() * (1 - CROWN_HEIGHT_IN_UNITS)
             ));
     }
 
