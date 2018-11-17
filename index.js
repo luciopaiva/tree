@@ -4,8 +4,7 @@ import Vector from "./vector.js";
 import Tree from "./tree.js";
 
 const SCALING_FACTOR = 0.3;
-const TRUNK_BASE_WIDTH = 90;
-const BORDER_SIZE_FACTOR = 0.04;
+const BORDER_SIZE = 5;
 
 class App {
 
@@ -69,7 +68,7 @@ class App {
 
     drawGround() {
         this.ctx.strokeStyle = this.strokeColor;
-        this.ctx.lineWidth = TRUNK_BASE_WIDTH * BORDER_SIZE_FACTOR;
+        this.ctx.lineWidth = BORDER_SIZE;
 
         this.ctx.beginPath();
 
@@ -97,7 +96,7 @@ class App {
         }
     }
 
-    doDrawTrunk(baseWidth, fixedWidth) {
+    doDrawTrunk(fixedWidthToAdd) {
         const aux = this.aux;
         this.modelToView(this.tree.trunk.segments[0].pos, aux);
         this.ctx.beginPath();
@@ -105,7 +104,7 @@ class App {
         for (let i = 1; i < this.tree.trunk.segments.length; i++) {
             const point = this.tree.trunk.segments[i].pos;
             this.modelToView(point, aux);
-            this.ctx.lineWidth = baseWidth * this.tree.trunk.segments[i].width + fixedWidth;
+            this.ctx.lineWidth = this.scaleX * this.tree.trunk.segments[i].width + fixedWidthToAdd;
             this.ctx.lineTo(aux.x, aux.y);
 
             this.ctx.stroke();
@@ -117,9 +116,9 @@ class App {
 
     drawTrunk() {
         this.ctx.strokeStyle = this.strokeColor;
-        this.doDrawTrunk(TRUNK_BASE_WIDTH, TRUNK_BASE_WIDTH * BORDER_SIZE_FACTOR);
+        this.doDrawTrunk(BORDER_SIZE);
         this.ctx.strokeStyle = this.woodColors[0];
-        this.doDrawTrunk(TRUNK_BASE_WIDTH * (1 - BORDER_SIZE_FACTOR), 0);
+        this.doDrawTrunk(0);
     }
 
     update() {

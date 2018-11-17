@@ -1,13 +1,22 @@
 
 import Vector from "./vector.js";
 
-const TRUNK_LENGTH = 0.3;
+/*
+   A tree model is always 1 unit high and 2 wide. All constants below take that into account.
+   The root is at 0,0.
+ */
+const TRUNK_LENGTH_IN_UNITS = 0.3;  // tree crown starts at this height
+const TRUNK_WIDTH_IN_UNITS = 0.15;
 const N_ATTRACTION_POINTS = 100;
-const MAX_BRANCH_SIZE_IN_SEGMENTS = 180;
-const MEANDER_ANGLE_IN_RADIANS = 10 / 180 * Math.PI;
+const MIN_BRANCH_WIDTH_RATIO = 0.2;  // min value allowed for `current width / base width` before branch stops growing
+const GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE = 0.004;
+const BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * 1.4;  // distance between segments
+const BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * .4;
+const MEANDER_ANGLE_IN_RADIANS = 15 / 180 * Math.PI;
 const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
-const BRANCH_GROWTH_STEP = 0.004;
+const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.03;  // width of a segment that has just born
+const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
 
 class Segment {
     /**
@@ -17,33 +26,30 @@ class Segment {
      *
      * @param x
      * @param y
-     * @param growthFactor
+     * @param finalWidth
      */
-    constructor (x, y, growthFactor) {
+    constructor (x, y, finalWidth) {
         this.pos = new Vector(x, y);
-        this.initialWidth = 0.01;
-        this.initialGrowthSpeed = .2 * growthFactor;
+        this.finalWidth = finalWidth;
+        this.initialWidth = SEGMENT_INITIAL_WIDTH_IN_UNITS;
         this.width = this.initialWidth;
-        this.growthSpeed = this.initialGrowthSpeed;
-        this.growthDeceleration = growthFactor;
     }
     update() {
-        if (this.growthSpeed > 0) {
-            this.width += this.growthSpeed;
-            this.growthSpeed *= this.growthDeceleration;
+        if (this.width < this.finalWidth) {
+            this.width += BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE;
         }
     }
 }
 
 class Branch {
-    constructor (x, y, scale, baseAngle) {
-        this.scale = scale;
+    constructor (x, y, baseAngle, baseWidth) {
+        this.baseWidth = baseWidth;
+        this.minWidth = MIN_BRANCH_WIDTH_RATIO * this.baseWidth;
+        this.currentWidth = this.baseWidth;
         this.baseAngle = Math.PI + baseAngle;
-        this.baseSegmentGrowthFactor = 0.7;
 
         /** @type {Segment[]} */
-        this.segments = [new Segment(x, y, this.baseSegmentGrowthFactor)];
-        this.maxSizeInSegments = MAX_BRANCH_SIZE_IN_SEGMENTS;
+        this.segments = [new Segment(x, y, this.currentWidth)];
 
         this.aux = new Vector(0, 1);  // unit vector up
         this.angleTime = 0;
@@ -53,7 +59,7 @@ class Branch {
     update() {
         this.segments.forEach(segment => segment.update());
 
-        if (this.segments.length >= this.maxSizeInSegments) {
+        if (this.currentWidth < this.minWidth) {
             return;
         }
 
@@ -65,23 +71,23 @@ class Branch {
         angle += Math.sin(2 * this.angleTime) * 0.8 * this.maxAngle;  // first octave at 80% amplitude
         this.angleTime += this.angleSpeed;
         aux.rotate(this.baseAngle + angle);
-        aux.mul(BRANCH_GROWTH_STEP);
+        aux.mul(BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE);
         aux.add(tip.pos);
 
-        this.segments.push(new Segment(aux.x, aux.y, this.baseSegmentGrowthFactor));
-        this.baseSegmentGrowthFactor *= .994;
+        this.segments.push(new Segment(aux.x, aux.y, this.currentWidth));
+        this.currentWidth *= NEXT_SEGMENT_WIDTH_RATIO;
     }
 }
 
 export default class Tree {
 
     constructor () {
-        this.trunk = new Branch(0, 0, 1, 0);
+        this.trunk = new Branch(0, 0, 0, TRUNK_WIDTH_IN_UNITS);
 
         this.attractionPoints = Array.from(Array(N_ATTRACTION_POINTS),
             () => new Vector(
                 2 * Math.random() - 1,
-                TRUNK_LENGTH + Math.random() * (1 - TRUNK_LENGTH)
+                TRUNK_LENGTH_IN_UNITS + Math.random() * (1 - TRUNK_LENGTH_IN_UNITS)
             ));
     }
 
