@@ -19,6 +19,7 @@ class App {
         document.body.appendChild(this.canvas);
 
         this.isRunning = true;
+        this.isDebugging = true;
 
         window.addEventListener("keypress", this.keypress.bind(this));
         window.addEventListener("resize", this.resize.bind(this));
@@ -47,7 +48,8 @@ class App {
     keypress(event) {
         switch (event.key) {
             case " ": this.isRunning = !this.isRunning; break;
-            case "n": this.update(performance.now(), true);
+            case "n": this.update(performance.now(), true); break;
+            case "d": this.isDebugging = !this.isDebugging; break;
         }
     }
 
@@ -158,7 +160,9 @@ class App {
             this.ctx.clearRect(0, 0, this.width, this.height);
 
             this.drawBranches();
-            this.drawAttractionPoints();
+            if (this.isDebugging) {
+                this.drawAttractionPoints();
+            }
             this.drawGround();
         }
 
