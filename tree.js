@@ -5,9 +5,9 @@ import Vector from "./vector.js";
    A tree model is always 1 unit high and 2 wide. All constants below take that into account.
    The root is at 0,0.
  */
-const CROWN_HEIGHT_IN_UNITS = 0.3;
-const TRUNK_WIDTH_IN_UNITS = 0.15;
-const N_ATTRACTION_POINTS = 200;
+const CROWN_HEIGHT_IN_UNITS = 0.15;
+const TRUNK_WIDTH_IN_UNITS = 0.2;
+const N_ATTRACTION_POINTS = 300;
 const MIN_BRANCH_WIDTH_RATIO = 0.2;  // min value allowed for `current width / base width` before branch stops growing
 const GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE = 0.004;
 const BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * 1.4;  // distance between segments
@@ -17,8 +17,8 @@ const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
 const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.03;  // width of a segment that has just born
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
-const COLONIZATION_INFLUENCE_RADIUS = 0.3;
-const COLONIZATION_KILL_RADIUS = 0.1;
+const COLONIZATION_INFLUENCE_RADIUS = 0.4;
+const COLONIZATION_KILL_RADIUS = 0.15;
 const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
 const PI_OVER_2 = Math.PI / 2;
 const MIN_ANGLE_FOR_BRANCHING_IN_DEGREES = 8;
@@ -226,6 +226,7 @@ export default class Tree {
                     newBranches = [];
                 }
 
+                // ToDo use pythagoras to determine new branch's width (see paper)
                 const branchWidth = segment.finalWidth * NEXT_SEGMENT_WIDTH_RATIO;
                 // first branch segment coincides with segment from parent's branch
                 const newBranch = new Branch(segment.pos.x, segment.pos.y, angle, branchWidth);
