@@ -24,6 +24,7 @@ const PI_OVER_2 = Math.PI / 2;
 const MIN_ANGLE_FOR_BRANCHING_IN_DEGREES = 8;
 const MAX_DOT_PRODUCT_FOR_BRANCHING = Math.cos(MIN_ANGLE_FOR_BRANCHING_IN_DEGREES / 180 * Math.PI);
 const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN_DEGREES) / 180 * Math.PI);
+const MIN_NORMALIZED_Y_TO_GROW = -0.4;
 
 let nextBranchId = 1;
 let auxVectorRight = new Vector(1, 0);  // unit vector pointing right (for angle computations)
@@ -209,6 +210,11 @@ export default class Tree {
                 acc.add(aux);
             }
             acc.normalize();
+
+            if (acc.y < MIN_NORMALIZED_Y_TO_GROW) {
+                continue;  // kill branches that try to grow down (they don't look natural)
+            }
+
             const angle = acc.angle;
 
             // decide whether can expand existing branch or if should spawn a new one
