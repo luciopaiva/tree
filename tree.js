@@ -85,7 +85,9 @@ class Branch {
     }
 
     clearGrowthMarker() {
+        const hadGrowthInLastPeriod = this.didGrow;
         this.didGrow = false;
+        return hadGrowthInLastPeriod;
     }
 
     getTip() {
@@ -270,14 +272,21 @@ export default class Tree {
         }
     }
 
-    update() {
+    clearAllAttractionPoints() {
         // clean up attraction point lists
         for (const branch of this.branches) {
-            branch.clearGrowthMarker();
             for (const segment of branch.segments) {
                 segment.clearAttractionPoints();
             }
         }
+    }
+
+    update() {
+        if (this.fullyGrown) {  // nothing to do - spare CPU time and return immediately
+            return;
+        }
+
+        this.clearAllAttractionPoints();
 
         this.calculateAttractionsAndGrowAttractedSegments();
 
@@ -285,5 +294,12 @@ export default class Tree {
 
         // branches updated during attraction section above won't be updated again here
         this.branches.forEach(branch => branch.update());
+
+        // clear growth marks and check if it is fully grown
+        let hadGrowthInLastPeriod = false;
+        for (const branch of this.branches) {
+            hadGrowthInLastPeriod |= branch.clearGrowthMarker();
+        }
+        this.fullyGrown = !hadGrowthInLastPeriod;
     }
 }
