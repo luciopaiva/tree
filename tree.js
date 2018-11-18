@@ -19,9 +19,11 @@ const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.03;  // width of a segment that has jus
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
 const COLONIZATION_INFLUENCE_RADIUS = 0.3;
 const COLONIZATION_KILL_RADIUS = 0.1;
-const SEGMENT_SEARCH_STEP = 10;  // this will increase gap between branch spawns
+const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
+const PI_OVER_2 = Math.PI / 2;
 
 let nextBranchId = 1;
+let auxVectorRight = new Vector(1, 0);  // unit vector pointing right (for angle computations)
 
 class Segment {
     /**
@@ -32,13 +34,11 @@ class Segment {
      * @param branch
      * @param x
      * @param y
-     * @param angle
      * @param finalWidth
      */
-    constructor (branch, x, y, angle, finalWidth) {
+    constructor (branch, x, y, finalWidth) {
         this.branch = branch;
         this.pos = new Vector(x, y);
-        this.angle = angle;
         this.finalWidth = finalWidth;
         this.initialWidth = SEGMENT_INITIAL_WIDTH_IN_UNITS;
         this.width = this.initialWidth;
@@ -62,7 +62,7 @@ class Branch {
     constructor (x, y, baseAngle, baseWidth) {
         this.id = nextBranchId++;
 
-        this.baseAngle = Math.PI + baseAngle;
+        this.baseAngle = baseAngle;
         this.baseWidth = baseWidth;
 
         /** @type {Segment[]} */
@@ -71,49 +71,68 @@ class Branch {
         this.minWidth = MIN_BRANCH_WIDTH_RATIO * this.baseWidth;
         this.currentWidth = this.baseWidth;
 
-        this.aux = new Vector(0, 1);  // unit vector up
         this.angleTime = 0;
         this.angleSpeed = MEANDER_CYCLES_PER_SECONDS_IN_RADIANS;
         this.maxAngle = MEANDER_ANGLE_IN_RADIANS;
+
+        /** This is used to certify that each branch will grow only once per update round */
+        this.didGrow = false;
+    }
+
+    clearGrowthMarker() {
+        this.didGrow = false;
     }
 
     getTip() {
         return this.segments[this.segments.length - 1];
     }
 
+    /**
+     * @param {Number} [angle] - if given, will be used as the absolute angle in radians used to calculate next
+     *                           segment's position
+     */
     grow(angle) {
         const tip = this.segments[this.segments.length - 1];
 
-        if (!angle) {
+        let segmentAngle;
+
+        if (angle) {
+            segmentAngle = angle;
+        } else {
             // no specific angle was provided - calculate meandering angle
             angle = Math.sin(this.angleTime) * this.maxAngle;         // fundamental frequency at 100% amplitude
             angle += Math.sin(2 * this.angleTime) * 0.8 * this.maxAngle;  // first octave at 80% amplitude
+            segmentAngle = this.baseAngle + angle;
         }
 
-        const segmentAngle = this.baseAngle + angle;
-
-        const aux = this.aux.restore();
+        const aux = auxVectorRight.restore();
         aux.rotate(segmentAngle);
         aux.mul(BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE);
         aux.add(tip.pos);
 
-        this.segments.push(new Segment(this, aux.x, aux.y, segmentAngle, this.currentWidth));
+        this.segments.push(new Segment(this, aux.x, aux.y, this.currentWidth));
 
         tip.isTipOfBranch = false;  // no longer the tip
 
         // update step variables
         this.angleTime += this.angleSpeed;
         this.currentWidth *= NEXT_SEGMENT_WIDTH_RATIO;
+
+        this.didGrow = true;
     }
 
-    update() {
+    update(growthAngle) {
+        if (this.didGrow) {
+            return;
+        }
+
         this.segments.forEach(segment => segment.update());
 
         if (this.currentWidth < this.minWidth) {
             return;
         }
 
-        this.grow();
+        this.grow(growthAngle);
     }
 }
 
@@ -122,7 +141,7 @@ export default class Tree {
     constructor () {
         /** @type {Branch[]} */
         this.branches = [];
-        const trunk = new Branch(0, 0, 0, TRUNK_WIDTH_IN_UNITS);
+        const trunk = new Branch(0, 0, PI_OVER_2, TRUNK_WIDTH_IN_UNITS);
         this.branches.push(trunk);
 
         this.accVector = new Vector();
@@ -136,8 +155,9 @@ export default class Tree {
     }
 
     obtainAttractedSegments() {
-        /** @type {Segment[]} */
-        let selectedSegments = [];
+        // more than one attractor can point to the same segment, so use a set to remove duplicate entries
+        /** @type {Set<Segment>} */
+        let selectedSegments = new Set();
 
         for (let pi = 0; pi < this.attractionPoints.length; pi++) {
             const attractionPoint = this.attractionPoints[pi];
@@ -161,7 +181,7 @@ export default class Tree {
 
             if (nearestSegment) {
                 nearestSegment.addAttractionPoint(attractionPoint);
-                selectedSegments.push(nearestSegment);
+                selectedSegments.add(nearestSegment);
             }
         }
 
@@ -180,26 +200,28 @@ export default class Tree {
                 acc.add(aux);
             }
             acc.normalize();
-            const angle = acc.angle - Math.PI / 2;
-
-            const branchWidth = segment.finalWidth * NEXT_SEGMENT_WIDTH_RATIO;
+            const angle = acc.angle;
 
             // decide whether can expand existing branch or if should spawn a new one
             if (segment.isTipOfBranch) {
-                segment.branch.grow(angle);
+                segment.branch.update(angle);
             } else {
                 if (!newBranches) {
                     newBranches = [];
                 }
 
-                acc.mul(0.001);
-                acc.add(segment.pos);
-                const newBranch = new Branch(acc.x, acc.y, angle, branchWidth);
+                const branchWidth = segment.finalWidth * NEXT_SEGMENT_WIDTH_RATIO;
+                // first branch segment coincides with segment from parent's branch
+                const newBranch = new Branch(segment.pos.x, segment.pos.y, angle, branchWidth);
+                newBranch.update(angle);
                 newBranches.push(newBranch);
             }
         }
 
-        return newBranches;
+        if (newBranches) {
+            // can only add new branches after finishing loop above, otherwise we'll end up growing the new ones once again
+            this.branches = this.branches.concat(newBranches);
+        }
     }
 
     removeDeadAttractionPoints() {
@@ -218,7 +240,7 @@ export default class Tree {
             }
         }
         // remove used attraction points
-        for (const i of usedAttractionsPointsByIndex) {
+        for (const i of usedAttractionsPointsByIndex.reverse()) {
             this.attractionPoints.splice(i, 1);
         }
     }
@@ -226,20 +248,17 @@ export default class Tree {
     update() {
         // clean up attraction point lists
         for (const branch of this.branches) {
+            branch.clearGrowthMarker();
             for (const segment of branch.segments) {
                 segment.clearAttractionPoints();
             }
         }
 
-        const newBranches = this.calculateAttractionsAndGrowAttractedSegments();
+        this.calculateAttractionsAndGrowAttractedSegments();
 
         this.removeDeadAttractionPoints();
 
-        // ToDo should not grow again branches that have just grown due to attraction calculations above
+        // branches updated during attraction section above won't be updated again here
         this.branches.forEach(branch => branch.update());
-
-        if (newBranches) {  // intentionally adding after update above
-            this.branches = this.branches.concat(newBranches);
-        }
     }
 }

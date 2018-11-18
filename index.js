@@ -12,7 +12,7 @@ class App {
     constructor () {
         this.branchesElem = document.getElementById("branches");
         this.segmentsElem = document.getElementById("segments");
-        this.attractionsElem = document.getElementById("attractions");
+        this.attractorsElem = document.getElementById("attractors");
 
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
@@ -41,7 +41,7 @@ class App {
         const branches = this.tree.branches;
         this.branchesElem.innerText = branches.length.toString();
         this.segmentsElem.innerText = branches.reduce((sum, branch) => sum + branch.segments.length, 0).toString();
-        this.attractionsElem.innerText = this.tree.attractionPoints.length.toString();
+        this.attractorsElem.innerText = this.tree.attractionPoints.length.toString();
     }
 
     keypress(event) {

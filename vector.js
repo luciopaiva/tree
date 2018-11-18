@@ -96,11 +96,12 @@ export default class Vector {
     }
 
     /**
-     * Get the angle (in radians) between this vector and the unit vector (1, 0)
+     * Gets the angle (in radians) between this vector and the unit vector (1, 0). Note that this considers only the
+     * plane x,y - z coordinate is discarded
      * @returns {Number}
      */
     get angle() {
-        return Math.acos(this.x / this.length);
+        return Math.atan2(this.y, this.x);
     }
 
     get length() {
