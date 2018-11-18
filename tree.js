@@ -59,11 +59,12 @@ class Segment {
 }
 
 class Branch {
-    constructor (x, y, baseAngle, baseWidth) {
+    constructor (x, y, baseAngle, baseWidth, isTrunk = false) {
         this.id = nextBranchId++;
 
         this.baseAngle = baseAngle;
         this.baseWidth = baseWidth;
+        this.isTrunk = isTrunk;
 
         /** @type {Segment[]} */
         this.segments = [new Segment(this, x, y, this.currentWidth)];
@@ -128,7 +129,11 @@ class Branch {
 
         this.segments.forEach(segment => segment.update());
 
-        if (this.currentWidth < this.minWidth) {
+        // we don't want the trunk to keep growing after the initial phase, unless it's being attracted
+        const trunkIsTooBigForNaturalGrowth = this.isTrunk && this.currentWidth < this.minWidth && !growthAngle;
+        // branches are not allowed to grow unless an angle was provided
+        const isBranchTryingToGrowNaturally = !this.isTrunk && !growthAngle;
+        if (trunkIsTooBigForNaturalGrowth || isBranchTryingToGrowNaturally) {
             return;
         }
 
@@ -141,7 +146,7 @@ export default class Tree {
     constructor () {
         /** @type {Branch[]} */
         this.branches = [];
-        const trunk = new Branch(0, 0, PI_OVER_2, TRUNK_WIDTH_IN_UNITS);
+        const trunk = new Branch(0, 0, PI_OVER_2, TRUNK_WIDTH_IN_UNITS, true);
         this.branches.push(trunk);
 
         this.accVector = new Vector();
