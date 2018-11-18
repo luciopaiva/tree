@@ -104,7 +104,7 @@ class App {
         const aux = this.aux;
         this.ctx.fillStyle = "red";
         for (const point of this.tree.attractionPoints) {
-            this.modelToView(point, aux);
+            this.modelToView(point.pos, aux);
             this.ctx.fillRect(aux.x - 1, aux.y - 1, 3, 3);
         }
 
@@ -115,7 +115,7 @@ class App {
             for (const segment of segments) {
                 for (const point of segment.attractionPoints) {
                     this.ctx.beginPath();
-                    this.modelToView(point, aux);
+                    this.modelToView(point.pos, aux);
                     this.ctx.moveTo(aux.x, aux.y);
                     this.modelToView(segment.pos, aux);
                     this.ctx.lineTo(aux.x, aux.y);

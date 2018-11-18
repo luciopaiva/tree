@@ -27,7 +27,10 @@ const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN
 const MIN_NORMALIZED_Y_TO_GROW = -1;  // set to -1 to disable restriction
 const MAXIMUM_NUMBER_OF_BRANCHES = 100;
 const NEW_BRANCH_WIDTH_RATIO = 0.6;  // width of new branch in relation to its parent's
-const TRUNK_DOES_NOT_GET_ATTRACTED = true;
+const TRUNK_DOES_NOT_GET_ATTRACTED = false;
+
+const HALF_CROWN_HEIGHT_IN_UNITS = CROWN_HEIGHT_IN_UNITS / 2;
+const CROWN_CENTER_Y = CROWN_BASE_Y_IN_UNITS + HALF_CROWN_HEIGHT_IN_UNITS;
 
 // ToDo flat quad-tree to make the algorithm run faster
 // ToDo force angle that a new branch makes with its parent (use attractors only to know to which side it should grow)
@@ -35,6 +38,14 @@ const TRUNK_DOES_NOT_GET_ATTRACTED = true;
 
 let nextBranchId = 1;
 let auxVectorRight = new Vector(1, 0);  // unit vector pointing right (for angle computations)
+
+class AttractionPoint {
+    constructor (x, y, influenceRadius, killDistance) {
+        this.pos = new Vector(x, y);
+        this.influenceRadius = influenceRadius;
+        this.killDistance = killDistance;
+    }
+}
 
 class Segment {
     /**
@@ -53,6 +64,7 @@ class Segment {
         this.finalWidth = finalWidth;
         this.widthStep = finalWidth * SEGMENT_INITIAL_WIDTH_RATIO;
         this.width = this.widthStep;
+        /** @type {AttractionPoint[]} */
         this.attractionPoints = [];
         this.isTipOfBranch = true;
     }
@@ -70,8 +82,10 @@ class Segment {
 }
 
 class Branch {
-    constructor (x, y, baseAngle, baseWidth, isTrunk = false) {
+    constructor (level, x, y, baseAngle, baseWidth, isTrunk = false) {
         this.id = nextBranchId++;
+        /** trunk is level 1 and every new child branch is incremented by 1 */
+        this.level = level;
 
         this.baseAngle = baseAngle;
         this.baseWidth = baseWidth;
@@ -144,7 +158,8 @@ class Branch {
         const trunkIsTooBigForNaturalGrowth = this.isTrunk && this.currentWidth < this.minWidth && !growthAngle;
         // branches are not allowed to grow unless an angle was provided
         const isBranchTryingToGrowNaturally = !this.isTrunk && !growthAngle;
-        if (trunkIsTooBigForNaturalGrowth || isBranchTryingToGrowNaturally) {
+
+        if (isBranchTryingToGrowNaturally || trunkIsTooBigForNaturalGrowth) {
             return;
         }
 
@@ -157,29 +172,34 @@ class Branch {
 export default class Tree {
 
     constructor () {
+        this.height = CROWN_BASE_Y_IN_UNITS + CROWN_HEIGHT_IN_UNITS;
+        this.width = 2;  // fixed from -1 to 1
+
         /** @type {Branch[]} */
         this.branches = [];
-        const trunk = new Branch(0, 0, PI_OVER_2, TRUNK_WIDTH_IN_UNITS, true);
+        const trunk = new Branch(1, 0, 0, PI_OVER_2, TRUNK_WIDTH_IN_UNITS, true);
         this.branches.push(trunk);
 
         this.accVector = new Vector();
         this.auxVector = new Vector();
 
-        this.height = CROWN_BASE_Y_IN_UNITS + CROWN_HEIGHT_IN_UNITS;
-        this.width = 2;  // fixed from -1 to 1
+        // initialize with first batch of attractors
+        /** @type {AttractionPoint[]} */
+        this.attractionPoints = [];
+        this.makeAttractionPointInEllipse(N_ATTRACTION_POINTS);
+    }
 
-        const crownCenterY = CROWN_BASE_Y_IN_UNITS + CROWN_HEIGHT_IN_UNITS / 2;
-
-        // generate rectangle of random points projected as an ellipsis (with intended non-uniformity)
-        // https://stackoverflow.com/a/5529230/778272
-        this.attractionPoints = Array.from(Array(N_ATTRACTION_POINTS),
-            () => {
-                const angle = Math.random() * TAU;
-                return new Vector(
-                    Math.cos(angle),
-                    crownCenterY + Math.sin(angle) * Math.random() * CROWN_HEIGHT_IN_UNITS / 2
-                )
-            });
+    makeAttractionPointInEllipse(howMany, attenuationFactor = 1) {
+        for (let i = 0; i < howMany; i++) {
+            // generate uniformly distributed random points inside ellipse (https://stackoverflow.com/a/5529199/778272)
+            const radius = Math.random();
+            const angle = Math.random() * TAU;
+            const x = Math.sqrt(radius) * Math.cos(angle);
+            const y = Math.sqrt(radius) * Math.sin(angle);
+            const point = new AttractionPoint(x, CROWN_CENTER_Y + y * HALF_CROWN_HEIGHT_IN_UNITS,
+                COLONIZATION_INFLUENCE_RADIUS, COLONIZATION_KILL_RADIUS / attenuationFactor);
+            this.attractionPoints.push(point);
+        }
     }
 
     obtainAttractedSegments() {
@@ -200,8 +220,8 @@ export default class Tree {
                 // intentionally skip segment 0 since it coincides with one of this branch's parent segments
                 for (let si = branch.segments.length - 1; si > 0; si -= SEGMENT_SEARCH_STEP) {
                     const segment = branch.segments[si];
-                    const distance = Vector.distance(attractionPoint, segment.pos);
-                    if (distance < COLONIZATION_INFLUENCE_RADIUS && distance < shortestDistance) {
+                    const distance = Vector.distance(attractionPoint.pos, segment.pos);
+                    if (distance < attractionPoint.influenceRadius && distance < shortestDistance) {
                         shortestDistance = distance;
                         nearestSegment = segment;
                     }
@@ -225,7 +245,7 @@ export default class Tree {
         for (const segment of this.obtainAttractedSegments()) {
             acc.clear();
             for (const point of segment.attractionPoints) {
-                aux.copyFrom(point).sub(segment.pos).normalize();
+                aux.copyFrom(point.pos).sub(segment.pos).normalize();
                 acc.add(aux);
             }
             acc.normalize();
@@ -267,7 +287,7 @@ export default class Tree {
                 // ToDo use pythagoras to determine new branch's width (see paper)
                 const branchWidth = segment.finalWidth * NEW_BRANCH_WIDTH_RATIO;
                 // first branch segment coincides with segment from parent's branch
-                const newBranch = new Branch(segment.pos.x, segment.pos.y, angle, branchWidth);
+                const newBranch = new Branch(segment.branch.level + 1, segment.pos.x, segment.pos.y, angle, branchWidth);
                 newBranch.update(angle);
                 newBranches.push(newBranch);
             }
@@ -287,8 +307,8 @@ export default class Tree {
 
             for (const branch of this.branches) {
                 for (const segment of branch.segments) {
-                    const distance = Vector.distance(attractionPoint, segment.pos);
-                    if (distance < COLONIZATION_KILL_RADIUS) {
+                    const distance = Vector.distance(attractionPoint.pos, segment.pos);
+                    if (distance < attractionPoint.killDistance) {
                         usedAttractionsPointsByIndex.push(pi);
                     }
                 }
