@@ -8,17 +8,16 @@ import Vector from "./vector.js";
 const CROWN_BASE_Y_IN_UNITS = 0.15;
 const CROWN_HEIGHT_IN_UNITS = 0.85;
 const TRUNK_WIDTH_IN_UNITS = 0.3;
-const N_ATTRACTION_POINTS = 500;
 const MIN_BRANCH_WIDTH_RATIO = 0.1;  // min value allowed for `current width / base width` before branch stops growing
-const GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE = 0.004;
-const BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * 1.4;  // distance between segments
 const MEANDER_ANGLE_IN_RADIANS = 15 / 180 * Math.PI;
 const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
 const SEGMENT_INITIAL_WIDTH_RATIO = 0.01;  // percentage of final width
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
-const COLONIZATION_INFLUENCE_RADIUS = 0.26;
-const COLONIZATION_KILL_RADIUS = 0.13;
+const N_ATTRACTION_POINTS = 500;
+const DISTANCE_BETWEEN_SEGMENTS_IN_UNITS = 0.0056;  // distance between segments
+const COLONIZATION_KILL_RADIUS = 20 * DISTANCE_BETWEEN_SEGMENTS_IN_UNITS;
+const COLONIZATION_INFLUENCE_RADIUS = 1.95 * COLONIZATION_KILL_RADIUS;
 const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
 const PI_OVER_2 = Math.PI / 2;
 const TAU = Math.PI * 2;
@@ -123,7 +122,7 @@ class Branch {
 
         const aux = auxVectorRight.restore();
         aux.rotate(segmentAngle);
-        aux.mul(BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE);
+        aux.mul(DISTANCE_BETWEEN_SEGMENTS_IN_UNITS);
         aux.add(tip.pos);
 
         this.segments.push(new Segment(this, aux.x, aux.y, this.currentWidth));
