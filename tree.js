@@ -23,6 +23,7 @@ const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
 const PI_OVER_2 = Math.PI / 2;
 const MIN_ANGLE_FOR_BRANCHING_IN_DEGREES = 8;
 const MAX_DOT_PRODUCT_FOR_BRANCHING = Math.cos(MIN_ANGLE_FOR_BRANCHING_IN_DEGREES / 180 * Math.PI);
+const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN_DEGREES) / 180 * Math.PI);
 
 let nextBranchId = 1;
 let auxVectorRight = new Vector(1, 0);  // unit vector pointing right (for angle computations)
@@ -215,10 +216,11 @@ export default class Tree {
                 segment.branch.update(angle);
             } else {
                 // hack to prevent infinite branching (described in README.md)
-                const previousSegment = segment.branch.segments[segment.branch.segments.indexOf(segment) - 1];
+                const previousSegment = segment.branch.segments[0];  // segment.branch.segments[segment.branch.segments.indexOf(segment) - 1];
                 aux.copyFrom(segment.pos).sub(previousSegment.pos).normalize();
-                if (acc.dot(aux) > MAX_DOT_PRODUCT_FOR_BRANCHING) {
-                    // branch direction is too similar to its parent - kill it
+                const dot = acc.dot(aux);
+                if (dot > MAX_DOT_PRODUCT_FOR_BRANCHING ||  // branch direction is too similar to its parent
+                    dot < MIN_DOT_PRODUCT_FOR_BRANCHING) {  // branch too dissimilar!
                     continue;
                 }
 
