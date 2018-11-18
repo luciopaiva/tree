@@ -3,9 +3,9 @@ import * as Utils from "./utils.js";
 import Vector from "./vector.js";
 import Tree from "./tree.js";
 
-const SCALING_FACTOR = 0.3;
+const SCALING_FACTOR = 0.8;  // percentage of screen height
 const BORDER_SIZE = 5;
-const WIREFRAME_MODE = true;
+const WIREFRAME_MODE = false;
 
 class App {
 
@@ -18,7 +18,7 @@ class App {
         this.ctx = this.canvas.getContext("2d");
         document.body.appendChild(this.canvas);
 
-        this.isRunning = false;
+        this.isRunning = true;
 
         window.addEventListener("keypress", this.keypress.bind(this));
         window.addEventListener("resize", this.resize.bind(this));
@@ -56,8 +56,8 @@ class App {
         this.height = window.innerHeight;
         this.hw = this.width / 2;
         this.hh = this.height / 2;
-        this.scaleX = Math.min(this.width, this.height) * SCALING_FACTOR;
-        this.scaleY = Math.min(this.width, this.height) * SCALING_FACTOR * 2;
+        this.scaleX = Math.min(this.width, this.height) * SCALING_FACTOR / 2;
+        this.scaleY = Math.min(this.width, this.height) * SCALING_FACTOR;
         this.canvas.setAttribute("width", this.width);
         this.canvas.setAttribute("height", this.height);
         if (!WIREFRAME_MODE) {
