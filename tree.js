@@ -11,14 +11,13 @@ const N_ATTRACTION_POINTS = 500;
 const MIN_BRANCH_WIDTH_RATIO = 0.1;  // min value allowed for `current width / base width` before branch stops growing
 const GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE = 0.004;
 const BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * 1.4;  // distance between segments
-const BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * .4;
 const MEANDER_ANGLE_IN_RADIANS = 15 / 180 * Math.PI;
 const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
-const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.01;  // width of a segment that has just born
+const SEGMENT_INITIAL_WIDTH_RATIO = 0.01;  // percentage of final width
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
 const COLONIZATION_INFLUENCE_RADIUS = 0.26;
-const COLONIZATION_KILL_RADIUS = 0.12;
+const COLONIZATION_KILL_RADIUS = 0.13;
 const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
 const PI_OVER_2 = Math.PI / 2;
 const TAU = Math.PI * 2;
@@ -27,12 +26,9 @@ const MAX_DOT_PRODUCT_FOR_BRANCHING = Math.cos(MIN_ANGLE_FOR_BRANCHING_IN_DEGREE
 const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN_DEGREES) / 180 * Math.PI);
 const MIN_NORMALIZED_Y_TO_GROW = -1;  // set to -1 to disable restriction
 const MAXIMUM_NUMBER_OF_BRANCHES = 100;
-const NEW_BRANCH_WIDTH_RATIO = 0.5;  // width of new branch in relation to its parent's
+const NEW_BRANCH_WIDTH_RATIO = 0.6;  // width of new branch in relation to its parent's
 
-// ToDo width of every segment should commence with i-th part of its final width and step i-th every update (so all branches finish growing together)
-// ToDo turn the crown into an ellipse
 // ToDo flat quad-tree to make the algorithm run faster
-// ToDo compute leaf with sinusoidal sums and multiplications
 // ToDo force angle that a new branch makes with its parent (use attractors only to know to which side it should grow)
 // ToDo decide whether to completely remove the trunk meandering algorithm (it's not being effectively used)
 // ToDo add leaf only to segments of a certain maximum width
@@ -55,14 +51,14 @@ class Segment {
         this.branch = branch;
         this.pos = new Vector(x, y);
         this.finalWidth = finalWidth;
-        this.initialWidth = finalWidth * SEGMENT_INITIAL_WIDTH_IN_UNITS;
-        this.width = this.initialWidth;
+        this.widthStep = finalWidth * SEGMENT_INITIAL_WIDTH_RATIO;
+        this.width = this.widthStep;
         this.attractionPoints = [];
         this.isTipOfBranch = true;
     }
     update() {
         if (this.width < this.finalWidth) {
-            this.width = Math.min(this.width + BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE, this.finalWidth);
+            this.width = Math.min(this.width + this.widthStep, this.finalWidth);
         }
     }
     clearAttractionPoints() {
@@ -121,6 +117,7 @@ class Branch {
             angle = Math.sin(this.angleTime) * this.maxAngle;         // fundamental frequency at 100% amplitude
             angle += Math.sin(2 * this.angleTime) * 0.8 * this.maxAngle;  // first octave at 80% amplitude
             segmentAngle = this.baseAngle + angle;
+            this.angleTime += this.angleSpeed;
         }
 
         const aux = auxVectorRight.restore();
@@ -133,7 +130,6 @@ class Branch {
         tip.isTipOfBranch = false;  // no longer the tip
 
         // update step variables
-        this.angleTime += this.angleSpeed;
         this.currentWidth *= NEXT_SEGMENT_WIDTH_RATIO;
 
         this.didGrow = true;
@@ -144,8 +140,6 @@ class Branch {
             return;
         }
 
-        this.segments.forEach(segment => segment.update());
-
         // we don't want the trunk to keep growing after the initial phase, unless it's being attracted
         const trunkIsTooBigForNaturalGrowth = this.isTrunk && this.currentWidth < this.minWidth && !growthAngle;
         // branches are not allowed to grow unless an angle was provided
@@ -153,6 +147,8 @@ class Branch {
         if (trunkIsTooBigForNaturalGrowth || isBranchTryingToGrowNaturally) {
             return;
         }
+
+        this.segments.forEach(segment => segment.update());
 
         this.grow(growthAngle);
     }
