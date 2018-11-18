@@ -21,16 +21,16 @@ class App {
         this.isRunning = true;
         this.isDebugging = true;
 
-        window.addEventListener("keypress", this.keypress.bind(this));
-        window.addEventListener("resize", this.resize.bind(this));
-        this.resize();
-
         this.strokeColor = Utils.readCssVar("stroke-color");
         this.leafColors = Utils.loadCssColorPalette("leaf-color");
         this.woodColors = Utils.loadCssColorPalette("wood-color");
 
         this.tree = new Tree();
         this.aux = new Vector();
+
+        window.addEventListener("keypress", this.keypress.bind(this));
+        window.addEventListener("resize", this.resize.bind(this));
+        this.resize();
 
         this.updateFn = this.update.bind(this);
         this.update(performance.now());
@@ -58,8 +58,10 @@ class App {
         this.height = window.innerHeight;
         this.hw = this.width / 2;
         this.hh = this.height / 2;
-        this.scaleX = Math.min(this.width, this.height) * SCALING_FACTOR / 2;
-        this.scaleY = Math.min(this.width, this.height) * SCALING_FACTOR;
+        this.treeHalfHeight = this.tree.height / 2;
+        const treeDimension = Math.max(this.tree.height, this.tree.width / 2);
+        this.scaleY = Math.min(this.width, this.height) * SCALING_FACTOR / treeDimension;
+        this.scaleX = this.scaleY / 2;
         this.canvas.setAttribute("width", this.width);
         this.canvas.setAttribute("height", this.height);
         if (!WIREFRAME_MODE) {
@@ -70,7 +72,7 @@ class App {
 
     modelToView(v, result) {
         result.x = this.hw + v.x * this.scaleX;          // x ranges from -1 (left) to +1 (right side of the tree)
-        result.y = this.hh - (v.y - 0.5) * this.scaleY;  // heights of tree points range from 0 to 1
+        result.y = this.hh - (v.y - this.treeHalfHeight) * this.scaleY   // heights of tree points range from 0 to tree.height
     }
 
     updateModel() {

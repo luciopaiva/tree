@@ -2,10 +2,11 @@
 import Vector from "./vector.js";
 
 /*
-   A tree model is always 1 unit high and 2 wide. All constants below take that into account.
-   The root is at 0,0.
+   A tree model is always 2 units wide, although its height may vary according to crown's parameters. All constants
+   below take that into account. The root is at 0,0, so horizontal goes from -1 to +1.
  */
-const CROWN_HEIGHT_IN_UNITS = 0.15;
+const CROWN_BASE_Y_IN_UNITS = 0.15;
+const CROWN_HEIGHT_IN_UNITS = 0.85;
 const TRUNK_WIDTH_IN_UNITS = 0.3;
 const N_ATTRACTION_POINTS = 500;
 const MIN_BRANCH_WIDTH_RATIO = 0.1;  // min value allowed for `current width / base width` before branch stops growing
@@ -31,7 +32,6 @@ const TRUNK_DOES_NOT_GET_ATTRACTED = true;
 
 // ToDo flat quad-tree to make the algorithm run faster
 // ToDo force angle that a new branch makes with its parent (use attractors only to know to which side it should grow)
-// ToDo decide whether to completely remove the trunk meandering algorithm (it's not being effectively used)
 // ToDo add leaf only to segments of a certain maximum width
 
 let nextBranchId = 1;
@@ -166,7 +166,10 @@ export default class Tree {
         this.accVector = new Vector();
         this.auxVector = new Vector();
 
-        const crownCenterY = CROWN_HEIGHT_IN_UNITS + (1 - CROWN_HEIGHT_IN_UNITS) / 2;
+        this.height = CROWN_BASE_Y_IN_UNITS + CROWN_HEIGHT_IN_UNITS;
+        this.width = 2;  // fixed from -1 to 1
+
+        const crownCenterY = CROWN_BASE_Y_IN_UNITS + CROWN_HEIGHT_IN_UNITS / 2;
 
         // generate rectangle of random points projected as an ellipsis (with intended non-uniformity)
         // https://stackoverflow.com/a/5529230/778272
@@ -175,7 +178,7 @@ export default class Tree {
                 const angle = Math.random() * TAU;
                 return new Vector(
                     Math.cos(angle),
-                    crownCenterY + Math.sin(angle) * Math.random() * (1 - CROWN_HEIGHT_IN_UNITS) / 2
+                    crownCenterY + Math.sin(angle) * Math.random() * CROWN_HEIGHT_IN_UNITS / 2
                 )
             });
     }
