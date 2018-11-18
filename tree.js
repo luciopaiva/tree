@@ -27,6 +27,7 @@ const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN
 const MIN_NORMALIZED_Y_TO_GROW = -1;  // set to -1 to disable restriction
 const MAXIMUM_NUMBER_OF_BRANCHES = 100;
 const NEW_BRANCH_WIDTH_RATIO = 0.6;  // width of new branch in relation to its parent's
+const TRUNK_DOES_NOT_GET_ATTRACTED = true;
 
 // ToDo flat quad-tree to make the algorithm run faster
 // ToDo force angle that a new branch makes with its parent (use attractors only to know to which side it should grow)
@@ -235,6 +236,12 @@ export default class Tree {
 
             // decide whether can expand existing branch or if should spawn a new one
             if (segment.isTipOfBranch) {
+                // the trunk is never attracted (although it prevents others from being attracted)
+                // this makes for a more symmetrical tree with the trunk as the backbone
+                if (TRUNK_DOES_NOT_GET_ATTRACTED && segment.branch === this.branches[0]) {
+                    continue;
+                }
+
                 segment.branch.update(angle);
             } else {
                 if (this.branches.length >= MAXIMUM_NUMBER_OF_BRANCHES) {
