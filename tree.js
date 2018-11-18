@@ -17,15 +17,19 @@ const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
 const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.01;  // width of a segment that has just born
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
-const COLONIZATION_INFLUENCE_RADIUS = 0.3;
-const COLONIZATION_KILL_RADIUS = 0.13;
+const COLONIZATION_INFLUENCE_RADIUS = 0.26;
+const COLONIZATION_KILL_RADIUS = 0.12;
 const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
 const PI_OVER_2 = Math.PI / 2;
+const TAU = Math.PI * 2;
 const MIN_ANGLE_FOR_BRANCHING_IN_DEGREES = 8;  // set to 0 to disable restriction
 const MAX_DOT_PRODUCT_FOR_BRANCHING = Math.cos(MIN_ANGLE_FOR_BRANCHING_IN_DEGREES / 180 * Math.PI);
 const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN_DEGREES) / 180 * Math.PI);
 const MIN_NORMALIZED_Y_TO_GROW = -1;  // set to -1 to disable restriction
+const MAXIMUM_NUMBER_OF_BRANCHES = 100;
+const NEW_BRANCH_WIDTH_RATIO = 0.5;  // width of new branch in relation to its parent's
 
+// ToDo width of every segment should commence with i-th part of its final width and step i-th every update (so all branches finish growing together)
 // ToDo turn the crown into an ellipse
 // ToDo flat quad-tree to make the algorithm run faster
 // ToDo compute leaf with sinusoidal sums and multiplications
@@ -165,11 +169,18 @@ export default class Tree {
         this.accVector = new Vector();
         this.auxVector = new Vector();
 
+        const crownCenterY = CROWN_HEIGHT_IN_UNITS + (1 - CROWN_HEIGHT_IN_UNITS) / 2;
+
+        // generate rectangle of random points projected as an ellipsis (with intended non-uniformity)
+        // https://stackoverflow.com/a/5529230/778272
         this.attractionPoints = Array.from(Array(N_ATTRACTION_POINTS),
-            () => new Vector(
-                2 * Math.random() - 1,
-                CROWN_HEIGHT_IN_UNITS + Math.random() * (1 - CROWN_HEIGHT_IN_UNITS)
-            ));
+            () => {
+                const angle = Math.random() * TAU;
+                return new Vector(
+                    Math.cos(angle),
+                    crownCenterY + Math.sin(angle) * Math.random() * (1 - CROWN_HEIGHT_IN_UNITS) / 2
+                )
+            });
     }
 
     obtainAttractedSegments() {
@@ -230,6 +241,11 @@ export default class Tree {
             if (segment.isTipOfBranch) {
                 segment.branch.update(angle);
             } else {
+                if (this.branches.length >= MAXIMUM_NUMBER_OF_BRANCHES) {
+                    // just in case something unexpected happens, so we don't crash the browser tab
+                    continue;
+                }
+
                 // hack to prevent infinite branching (described in README.md)
                 const previousSegment = segment.branch.segments[segment.branch.segments.indexOf(segment) - 1];  // ToDo save previous segment in every segment to avoid this lookup
                 aux.copyFrom(segment.pos).sub(previousSegment.pos).normalize();
@@ -244,7 +260,7 @@ export default class Tree {
                 }
 
                 // ToDo use pythagoras to determine new branch's width (see paper)
-                const branchWidth = segment.finalWidth * .5;  // * NEXT_SEGMENT_WIDTH_RATIO;
+                const branchWidth = segment.finalWidth * NEW_BRANCH_WIDTH_RATIO;
                 // first branch segment coincides with segment from parent's branch
                 const newBranch = new Branch(segment.pos.x, segment.pos.y, angle, branchWidth);
                 newBranch.update(angle);
