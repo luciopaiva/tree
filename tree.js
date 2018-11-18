@@ -6,25 +6,32 @@ import Vector from "./vector.js";
    The root is at 0,0.
  */
 const CROWN_HEIGHT_IN_UNITS = 0.15;
-const TRUNK_WIDTH_IN_UNITS = 0.2;
-const N_ATTRACTION_POINTS = 300;
-const MIN_BRANCH_WIDTH_RATIO = 0.2;  // min value allowed for `current width / base width` before branch stops growing
+const TRUNK_WIDTH_IN_UNITS = 0.3;
+const N_ATTRACTION_POINTS = 500;
+const MIN_BRANCH_WIDTH_RATIO = 0.1;  // min value allowed for `current width / base width` before branch stops growing
 const GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE = 0.004;
 const BRANCH_LENGTH_GROWTH_STEP_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * 1.4;  // distance between segments
 const BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE = GENERAL_GROWTH_SPEED_IN_UNITS_PER_UDPATE * .4;
 const MEANDER_ANGLE_IN_RADIANS = 15 / 180 * Math.PI;
 const MEANDER_CYCLES_PER_SECOND = 2.5;
 const MEANDER_CYCLES_PER_SECONDS_IN_RADIANS = Math.PI / 60 * MEANDER_CYCLES_PER_SECOND;
-const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.03;  // width of a segment that has just born
+const SEGMENT_INITIAL_WIDTH_IN_UNITS = 0.01;  // width of a segment that has just born
 const NEXT_SEGMENT_WIDTH_RATIO = .986;  // width of next segment is this fraction of the current one
-const COLONIZATION_INFLUENCE_RADIUS = 0.4;
-const COLONIZATION_KILL_RADIUS = 0.15;
+const COLONIZATION_INFLUENCE_RADIUS = 0.3;
+const COLONIZATION_KILL_RADIUS = 0.13;
 const SEGMENT_SEARCH_STEP = 1;  // this will increase gap between branch spawns
 const PI_OVER_2 = Math.PI / 2;
-const MIN_ANGLE_FOR_BRANCHING_IN_DEGREES = 8;
+const MIN_ANGLE_FOR_BRANCHING_IN_DEGREES = 8;  // set to 0 to disable restriction
 const MAX_DOT_PRODUCT_FOR_BRANCHING = Math.cos(MIN_ANGLE_FOR_BRANCHING_IN_DEGREES / 180 * Math.PI);
 const MIN_DOT_PRODUCT_FOR_BRANCHING = Math.cos((180 - MIN_ANGLE_FOR_BRANCHING_IN_DEGREES) / 180 * Math.PI);
-const MIN_NORMALIZED_Y_TO_GROW = -0.4;
+const MIN_NORMALIZED_Y_TO_GROW = -1;  // set to -1 to disable restriction
+
+// ToDo turn the crown into an ellipse
+// ToDo flat quad-tree to make the algorithm run faster
+// ToDo compute leaf with sinusoidal sums and multiplications
+// ToDo force angle that a new branch makes with its parent (use attractors only to know to which side it should grow)
+// ToDo decide whether to completely remove the trunk meandering algorithm (it's not being effectively used)
+// ToDo add leaf only to segments of a certain maximum width
 
 let nextBranchId = 1;
 let auxVectorRight = new Vector(1, 0);  // unit vector pointing right (for angle computations)
@@ -44,14 +51,14 @@ class Segment {
         this.branch = branch;
         this.pos = new Vector(x, y);
         this.finalWidth = finalWidth;
-        this.initialWidth = SEGMENT_INITIAL_WIDTH_IN_UNITS;
+        this.initialWidth = finalWidth * SEGMENT_INITIAL_WIDTH_IN_UNITS;
         this.width = this.initialWidth;
         this.attractionPoints = [];
         this.isTipOfBranch = true;
     }
     update() {
         if (this.width < this.finalWidth) {
-            this.width += BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE;
+            this.width = Math.min(this.width + BRANCH_WIDTH_GROWTH_SPEED_IN_UNITS_PER_UPDATE, this.finalWidth);
         }
     }
     clearAttractionPoints() {
@@ -69,12 +76,12 @@ class Branch {
         this.baseAngle = baseAngle;
         this.baseWidth = baseWidth;
         this.isTrunk = isTrunk;
+        this.currentWidth = this.baseWidth;
 
         /** @type {Segment[]} */
         this.segments = [new Segment(this, x, y, this.currentWidth)];
 
         this.minWidth = MIN_BRANCH_WIDTH_RATIO * this.baseWidth;
-        this.currentWidth = this.baseWidth;
 
         this.angleTime = 0;
         this.angleSpeed = MEANDER_CYCLES_PER_SECONDS_IN_RADIANS;
@@ -224,7 +231,7 @@ export default class Tree {
                 segment.branch.update(angle);
             } else {
                 // hack to prevent infinite branching (described in README.md)
-                const previousSegment = segment.branch.segments[0];  // segment.branch.segments[segment.branch.segments.indexOf(segment) - 1];
+                const previousSegment = segment.branch.segments[segment.branch.segments.indexOf(segment) - 1];  // ToDo save previous segment in every segment to avoid this lookup
                 aux.copyFrom(segment.pos).sub(previousSegment.pos).normalize();
                 const dot = acc.dot(aux);
                 if (dot > MAX_DOT_PRODUCT_FOR_BRANCHING ||  // branch direction is too similar to its parent
@@ -237,7 +244,7 @@ export default class Tree {
                 }
 
                 // ToDo use pythagoras to determine new branch's width (see paper)
-                const branchWidth = segment.finalWidth * NEXT_SEGMENT_WIDTH_RATIO;
+                const branchWidth = segment.finalWidth * .5;  // * NEXT_SEGMENT_WIDTH_RATIO;
                 // first branch segment coincides with segment from parent's branch
                 const newBranch = new Branch(segment.pos.x, segment.pos.y, angle, branchWidth);
                 newBranch.update(angle);

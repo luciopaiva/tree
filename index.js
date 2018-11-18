@@ -4,7 +4,7 @@ import Vector from "./vector.js";
 import Tree from "./tree.js";
 
 const SCALING_FACTOR = 0.8;  // percentage of screen height
-const BORDER_SIZE = 5;
+const BORDER_SIZE = 2;
 const WIREFRAME_MODE = false;
 
 class App {
