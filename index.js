@@ -20,6 +20,7 @@ class App {
 
         this.isRunning = true;
         this.isDebugging = true;
+        this.wireframeMode = WIREFRAME_MODE;
 
         this.strokeColor = Utils.readCssVar("stroke-color");
         this.leafColors = Utils.loadCssColorPalette("leaf-color");
@@ -50,6 +51,8 @@ class App {
             case " ": this.isRunning = !this.isRunning; break;
             case "n": this.update(performance.now(), true); break;
             case "d": this.isDebugging = !this.isDebugging; break;
+            case "g": this.growTreeAtOnce(); break;
+            case "w": this.wireframeMode = !this.wireframeMode; break;
         }
     }
 
@@ -64,7 +67,7 @@ class App {
         this.scaleX = this.scaleY / 2;
         this.canvas.setAttribute("width", this.width);
         this.canvas.setAttribute("height", this.height);
-        if (!WIREFRAME_MODE) {
+        if (!this.wireframeMode) {
             this.ctx.lineJoin = "round";
             this.ctx.lineCap = "round";
         }
@@ -73,6 +76,12 @@ class App {
     modelToView(v, result) {
         result.x = this.hw + v.x * this.scaleX;          // x ranges from -1 (left) to +1 (right side of the tree)
         result.y = this.hh - (v.y - this.treeHalfHeight) * this.scaleY   // heights of tree points range from 0 to tree.height
+    }
+
+    growTreeAtOnce() {
+        while (!this.tree.fullyGrown) {
+            this.tree.update();
+        }
     }
 
     updateModel() {
@@ -135,7 +144,7 @@ class App {
             for (let i = 1; i < segments.length; i++) {
                 const point = segments[i].pos;
                 this.modelToView(point, aux);
-                this.ctx.lineWidth = WIREFRAME_MODE ? 1 : this.scaleX * segments[i].width + fixedWidthToAdd;
+                this.ctx.lineWidth = this.wireframeMode ? 1 : this.scaleX * segments[i].width + fixedWidthToAdd;
                 this.ctx.lineTo(aux.x, aux.y);
 
                 this.ctx.stroke();
@@ -147,7 +156,7 @@ class App {
     }
 
     drawBranches() {
-        if (!WIREFRAME_MODE) {
+        if (!this.wireframeMode) {
             this.ctx.strokeStyle = this.strokeColor;
             this.doDrawBranches(BORDER_SIZE);
         }
